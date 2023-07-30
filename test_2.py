@@ -109,11 +109,13 @@ def format_rows(rows: list) -> list:
     return dict_formatted_rows
 
 
-def find_distance(court):
+def find_distance(court: dict) -> float:
+    """Function that takes a court and returns the distance as a float
+    to be used as a key for sorting the matched courts"""
     return court["distance"]
 
 
-def get_court_info_with_api(home_postcode: str, type_of_court_desired: str):
+def get_court_info_with_api(home_postcode: str, type_of_court_desired: str) -> dict:
     """Function that retrieves and returns relevant court information 
     from the postcode provided for a specific row"""
     response = requests.get(
@@ -129,6 +131,8 @@ def get_court_info_with_api(home_postcode: str, type_of_court_desired: str):
             dict = {}
             dict["court_name"] = court["name"]
             dict["distance"] = court["distance"]
+            if court["dx_number"] == None:
+                court["dx_number"] = "No dx_number available"
             dict["dx_number"] = court["dx_number"]
             matching_courts.append(dict)
     if matching_courts == []:
@@ -136,6 +140,22 @@ def get_court_info_with_api(home_postcode: str, type_of_court_desired: str):
     matching_courts.sort(key=find_distance)
     closest_court = matching_courts[0]
     return closest_court
+
+
+def upload_to_csv(dict_formatted_rows: list) -> None:
+    """Function that deletes previous runs csv file and then 
+    uploads the rows of dictionaries to a csv file as the formatted 
+    output data file"""
+    with open("output_court_data.csv", "w") as file:
+        file.seek(0)
+        file.truncate()
+        file = csv.DictWriter(file, dict_formatted_rows[0].keys())
+        file.writeheader()
+
+    for row in dict_formatted_rows:
+        with open("output_court_data.csv", "a") as file:
+            file = csv.DictWriter(file, row.keys())
+            file.writerow(row)
 
 
 if __name__ == "__main__":
@@ -148,4 +168,4 @@ if __name__ == "__main__":
         row["nearest_court_of_the_right_type"] = closest_court["court_name"]
         row["dx_number"] = closest_court["dx_number"]
         row["distance"] = closest_court["distance"]
-    print(dict_formatted_rows)
+    upload_to_csv(dict_formatted_rows)
