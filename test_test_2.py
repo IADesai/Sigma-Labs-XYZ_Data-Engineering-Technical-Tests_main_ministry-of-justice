@@ -5,6 +5,8 @@ from test_2 import read_csv_rows, format_rows, get_court_info_with_api, Error
 
 
 def test_format_to_dict():
+    """Test that checks that the rows inside the list from the csv file
+    are converted into dictionary rows properly with the format_rows function"""
     fake_row = [['Iriquois Pliskin', 'SE17TP', 'Crown Court']]
     assert format_rows(fake_row) == [
         {'name': 'Iriquois Pliskin', 'home_postcode': 'SE17TP', 'type_of_court_desired': 'Crown Court'}]
@@ -33,9 +35,9 @@ class TestGetCourtsInfoWithAPI:
         assert exception.value.message == "Unable to connect to the server."
         assert exception.value.code == 500
 
-    def test_weather_for_location(self, requests_mock):
-        """Checks that the weather and temperature returned from the
-        load_weather_for_location function is correct"""
+    def test_courts_for_location(self, requests_mock):
+        """Checks that the name, distance, and dx_number returned from the
+        get_court_info_with_api function is correct"""
         postcode = "IG58JA"
         type_of_court_desired = "Tribunal"
         court = [{"name": "Court",
