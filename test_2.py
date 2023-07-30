@@ -69,6 +69,83 @@
 # - the dx_number (if available) of the nearest court of the right type
 # - the distance to the nearest court of the right type
 
+import csv
+import requests
+import json
+
+
+class Error(Exception):
+    """Describes an error triggered by a failing API call."""
+
+    def __init__(self, message: str, code: int):
+        """Creates a new APIError instance."""
+        self.message = message
+        self.code = code
+
+
+def read_csv_rows() -> list:
+    """Function that reads the csv rows from people.csv and 
+    outputs a list of lists where the rows of information 
+    are the items in the larger list"""
+    rows = []
+    with open('people.csv') as file:
+        csv_file = csv.reader(file)
+        for row in csv_file:
+            rows.append(row)
+    return rows[1:]
+
+
+def format_rows(rows: list) -> list:
+    """Function that formats the rows of information from lists into
+    dictionaries, to specify the sections of data in the rows of 
+    information (into name, postcode, and court type)"""
+    dict_formatted_rows = []
+    for row in rows:
+        dict = {}
+        dict["name"] = row[0]
+        dict["home_postcode"] = row[1]
+        dict["type_of_court_desired"] = row[2]
+        dict_formatted_rows.append(dict)
+    return dict_formatted_rows
+
+
+def find_distance(court):
+    return court["distance"]
+
+
+def get_court_info_with_api(home_postcode: str, type_of_court_desired: str):
+    """Function that retrieves and returns relevant court information 
+    from the postcode provided for a specific row"""
+    response = requests.get(
+        f"https://courttribunalfinder.service.gov.uk/search/results.json?postcode={home_postcode}")
+    if response.status_code == 404:
+        raise Error("Unable to match postcode.", 404)
+    if response.status_code == 500:
+        raise Error("Unable to connect to the server.", 500)
+    court_data = json.loads(response.text)
+    matching_courts = []
+    for court in court_data:
+        if type_of_court_desired in court["types"]:
+            dict = {}
+            dict["court_name"] = court["name"]
+            dict["distance"] = court["distance"]
+            dict["dx_number"] = court["dx_number"]
+            matching_courts.append(dict)
+    if matching_courts == []:
+        raise Exception("Unable to find any courts of that type nearby")
+    matching_courts.sort(key=find_distance)
+    closest_court = matching_courts[0]
+    return closest_court
+
+
 if __name__ == "__main__":
     # [TODO]: write your answer here
-    pass
+    rows = read_csv_rows()
+    dict_formatted_rows = format_rows(rows)
+    for row in dict_formatted_rows:
+        closest_court = get_court_info_with_api(
+            row["home_postcode"], row["type_of_court_desired"])
+        row["nearest_court_of_the_right_type"] = closest_court["court_name"]
+        row["dx_number"] = closest_court["dx_number"]
+        row["distance"] = closest_court["distance"]
+    print(dict_formatted_rows)
